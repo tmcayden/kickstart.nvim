@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -102,7 +102,7 @@ vim.g.have_nerd_font = false
 vim.opt.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.opt.relativenumber = true
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
@@ -175,10 +175,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
+vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
+vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
+vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -325,7 +325,108 @@ require('lazy').setup({
       },
     },
   },
+  {
+    'smoka7/hop.nvim',
+    version = '*',
+    config = function()
+      require('hop').setup { keys = 'etovxqpdygfblzhckisuran' }
 
+      -- Use Hop to jump to words
+      vim.keymap.set('n', '<C-f>', function()
+        require('hop').hint_words() -- Jump to any word
+      end, { noremap = true, silent = true })
+
+      -- Use Hop to jump to characters
+      vim.keymap.set('n', '<C-s>', function()
+        require('hop').hint_char2() -- Jump to any 2nd character
+      end, { noremap = true, silent = true })
+    end,
+    event = 'VeryLazy',
+  },
+  {
+    'voldikss/vim-floaterm',
+    config = function()
+      -- Set the shell to Powershell
+      vim.g.floaterm_shell = 'powershell.exe'
+
+      -- Set the size of the floaterm windows
+      vim.g.floaterm_width = 0.8
+      vim.g.floaterm_height = 0.8
+
+      -- Create terminal 1 if it doesn't exist and toggle it
+      vim.api.nvim_set_keymap('n', '<leader>th', ':FloatermToggle one<CR>', { noremap = true, silent = true })
+      -- Create terminal 2 if it doesn't exist and toggle it
+      vim.api.nvim_set_keymap('n', '<leader>tj', ':FloatermToggle two<CR>', { noremap = true, silent = true })
+      -- Create terminal 3 if it doesn't exist and toggle it
+      vim.api.nvim_set_keymap('n', '<leader>tk', ':FloatermToggle three<CR>', { noremap = true, silent = true })
+      -- Create terminal 4 if it doesn't exist and toggle it
+      vim.api.nvim_set_keymap('n', '<leader>tl', ':FloatermToggle four<CR>', { noremap = true, silent = true })
+
+      -- Exit terminal mode and close the terminal window (hide it)
+      vim.api.nvim_set_keymap('t', '<C-w>q', '<C-\\><C-n>:FloatermHide<CR>', { noremap = true, silent = true })
+    end,
+    event = 'VeryLazy', -- Ensure it's lazy-loaded after Neovim starts
+  },
+  {
+    'windwp/nvim-ts-autotag',
+    requires = 'nvim-treesitter/nvim-treesitter',
+    config = function()
+      require('nvim-ts-autotag').setup()
+    end,
+    event = 'VeryLazy',
+  },
+  {
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v2.x', -- Make sure to use the correct branch
+    -- Use the v2.x branch for NeoTree
+    dependencies = {
+      'nvim-tree/nvim-web-devicons', -- This provides the Nerd Font icons
+    },
+    config = function()
+      function ToggleNeoTree()
+        -- Check if any window is showing Neo-tree
+        local neotree_open = false
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          local buf = vim.api.nvim_win_get_buf(win)
+          local bufname = vim.api.nvim_buf_get_name(buf)
+          if bufname:match 'neo%-tree filesystem' then
+            neotree_open = true
+            break
+          end
+        end
+
+        if neotree_open then
+          -- Close Neo-tree if it's open
+          vim.cmd 'Neotree close'
+        else
+          -- Reveal Neo-tree if it's closed
+          vim.cmd 'Neotree reveal'
+        end
+      end
+
+      vim.api.nvim_set_keymap('n', '<leader>pv', ':lua ToggleNeoTree()<CR>', { noremap = true, silent = true })
+
+      require('neo-tree').setup {
+        filesystem = {
+          follow_current_file = { enabled = true },
+          use_libuv_file_watcher = true,
+          group_empty_dirs = true,
+          filtered_items = { visible = true },
+          focus_on_file = false,
+        },
+        window = {
+          position = 'left',
+          width = 30,
+        },
+        default_component_configs = {
+          icon = {
+            enabled = true, -- Ensure icons are enabled
+          },
+        },
+      }
+    end,
+    event = 'VeryLazy', -- This ensures NeoTree loads when first triggered
+  },
   -- NOTE: Plugins can specify dependencies.
   --
   -- The dependencies are proper plugin specifications as well - anything
@@ -534,8 +635,7 @@ require('lazy').setup({
           --  Symbols are things like variables, functions, types, etc.
           map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
 
-          -- Fuzzy find all the symbols in your current workspace.
-          --  Similar to document symbols, except searches over your entire project.
+          -- Fuzzy find all the symbols in your current workspace. Similar to document symbols, except searches over your entire project.
           map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
 
           -- Rename the variable under your cursor.
@@ -719,7 +819,7 @@ require('lazy').setup({
         -- python = { "isort", "black" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -936,15 +1036,15 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
