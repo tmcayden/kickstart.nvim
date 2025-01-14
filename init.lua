@@ -549,12 +549,31 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          -- Enable search history
+          history = {
+            path = vim.fn.stdpath 'data' .. '/telescope_history', -- Path to store history
+            limit = 1000, -- Limit the number of saved search entries
+          },
+          mappings = {
+            i = {
+              -- Custom keybindings for interacting with search history
+              ['<C-n>'] = require('telescope.actions').cycle_history_next, -- Next search in history
+              ['<C-p>'] = require('telescope.actions').cycle_history_prev, -- Previous search in history
+            },
+            n = {
+              ['t'] = require('telescope.actions').select_tab,
+            },
+          },
+          file_ignore_patterns = {
+            '.git',
+            'node_modules',
+            '*.log',
+            '*.tmp',
+            '__pycache__',
+            '*.pyc',
+          },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -573,7 +592,51 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+      local history = {}
+      vim.keymap.set('n', '<leader>sg', function()
+        vim.ui.input({ prompt = 'Grep > ' }, function(input)
+          if input and input ~= '' then
+            table.insert(history, 1, input) -- Add input to history
+            builtin.grep_string { search = input }
+          end
+        end)
+      end, { desc = '[S]earch [G]rep input' })
+      -- Keymap for showing search history
+      vim.keymap.set('n', '<leader>sp', function()
+        require('telescope.pickers')
+          .new({}, {
+            prompt_title = 'Search History',
+            finder = require('telescope.finders').new_table {
+              results = history,
+            },
+            sorter = require('telescope.config').values.generic_sorter {},
+            attach_mappings = function(prompt_bufnr, map)
+              local actions = require 'telescope.actions'
+              local action_state = require 'telescope.actions.state'
+
+              -- When Enter is pressed, call `builtin.grep_string` with the selected history entry
+              map('i', '<CR>', function()
+                local entry = action_state.get_selected_entry(prompt_bufnr)
+                actions.close(prompt_bufnr)
+                if entry then
+                  builtin.grep_string { search = entry[1] }
+                end
+              end)
+
+              -- For normal mode, also allow the Enter key to work
+              map('n', '<CR>', function()
+                local entry = action_state.get_selected_entry(prompt_bufnr)
+                actions.close(prompt_bufnr)
+                if entry then
+                  builtin.grep_string { search = entry[1] }
+                end
+              end)
+
+              return true
+            end,
+          })
+          :find()
+      end, { desc = '[S]earch [P]revious searches' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
@@ -603,7 +666,32 @@ require('lazy').setup({
       end, { desc = '[S]earch [N]eovim files' })
     end,
   },
-
+  {
+    'rmagatti/goto-preview',
+    config = function()
+      require('goto-preview').setup {
+        width = 150, -- Width of the floating window
+        height = 50, -- Height of the floating window
+      }
+      vim.keymap.set('n', '<leader>pd', function()
+        require('goto-preview').goto_preview_definition()
+      end)
+      vim.keymap.set('n', '<leader>pt', function()
+        require('goto-preview').goto_preview_type_definition()
+      end)
+      vim.keymap.set('n', '<leader>pi', function()
+        require('goto-preview').goto_preview_type_definition()
+      end)
+      vim.keymap.set('n', '<leader>pr', function()
+        require('goto-preview').goto_preview_references()
+      end)
+      vim.keymap.set('n', '<leader>pc', function()
+        require('goto-preview').close_all_win()
+      end)
+      vim.keymap.set('n', '<leader>po', '<Cmd>wincmd T<CR>', { noremap = true, silent = true })
+    end,
+    event = 'VeryLazy',
+  },
   -- LSP Plugins
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
