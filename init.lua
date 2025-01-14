@@ -749,7 +749,7 @@ require('lazy').setup({
           --
           -- This may be unwanted, since they displace some of your code
           if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
-            map('<leader>th', function()
+            map('<leader>ht', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
           end
@@ -840,6 +840,17 @@ require('lazy').setup({
             -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             require('lspconfig')[server_name].setup(server)
+            require('lspconfig').omnisharp.setup {
+              capabilities = capabilities,
+              enable_roslyn_analysers = true,
+              enable_import_completion = true,
+              organize_imports_on_format = true,
+              enable_decompilation_support = true,
+              filetypes = { 'cs', 'vb', 'csproj', 'sln', 'slnx', 'props', 'csx', 'targets', 'cshtml' },
+            }
+            require('lspconfig').volar.setup {
+              filetypes = { 'typescript', 'javascript', 'javascriptreact', 'typescriptreact', 'vue', 'json' },
+            }
           end,
         },
         ensure_installed = { 'volar', 'omnisharp', 'ts_ls' },
