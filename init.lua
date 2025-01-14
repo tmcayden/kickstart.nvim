@@ -933,7 +933,7 @@ require('lazy').setup({
             }
           end,
         },
-        ensure_installed = { 'volar', 'omnisharp', 'ts_ls' },
+        ensure_installed = { 'volar', 'omnisharp' },
         automatic_installation = true,
       }
     end,
