@@ -20,7 +20,6 @@ return {
     -- Installs the debug adapters for you
     'williamboman/mason.nvim',
     'jay-babu/mason-nvim-dap.nvim',
-
     -- Add your own debuggers here
     'leoluz/nvim-dap-go',
   },
@@ -95,6 +94,41 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
+      },
+    }
+
+    dap.adapters.coreclr = {
+      type = 'executable',
+      command = 'C:\\netcoredbg\\netcoredbg.exe',
+      args = { '--interpreter=vscode' },
+    }
+
+    dap.configurations.cs = {
+      {
+        type = 'coreclr',
+        request = 'launch',
+        name = 'Launch .NET',
+        program = function()
+          local project_name = vim.fn.input('Enter project name: ', '', 'file') -- Prompt for input
+          local workspace = vim.fn.getcwd()
+
+          -- Find the correct .NET folder dynamically
+          local dll_pattern = string.format('%s/%s/bin/Debug/*/%s.dll', workspace, project_name, project_name)
+          local dll_path = vim.fn.glob(dll_pattern)
+
+          if dll_path == '' then
+            error('Could not find DLL matching pattern: ' .. dll_pattern)
+          end
+
+          return dll_path
+        end,
+        cwd = function()
+          local project_name = vim.fn.input('Enter project name: ', '', 'file') -- Prompt again for consistency
+          local workspace = vim.fn.getcwd()
+          return string.format('%s/%s', workspace, project_name)
+        end,
+        env = { ASPNETCORE_ENVIRONMENT = 'Development' },
+        args = { '--urls', 'http://localhost:63063' },
       },
     }
 
