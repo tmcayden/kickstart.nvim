@@ -241,6 +241,7 @@ vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
 vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
+vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer<CR>')
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
@@ -397,7 +398,7 @@ require('lazy').setup({
       require('hop').setup { keys = 'etovxqpdygfblzhckisuran' }
 
       -- Use Hop to jump to words
-      vim.keymap.set('n', '<C-f>', function()
+      vim.keymap.set('n', '<C-a>', function()
         require('hop').hint_words() -- Jump to any word
       end, { noremap = true, silent = true })
 
@@ -409,28 +410,33 @@ require('lazy').setup({
     event = 'VeryLazy',
   },
   {
-    'voldikss/vim-floaterm',
+    'ThePrimeagen/harpoon',
+    dependencies = { 'nvim-lua/plenary.nvim' },
     config = function()
-      -- Set the shell to Powershell
-      vim.g.floaterm_shell = 'powershell.exe'
+      require('harpoon').setup()
+      local mark = require 'harpoon.mark'
+      local ui = require 'harpoon.ui'
 
-      -- Set the size of the floaterm windows
-      vim.g.floaterm_width = 0.8
-      vim.g.floaterm_height = 0.8
-
-      -- Create terminal 1 if it doesn't exist and toggle it
-      vim.api.nvim_set_keymap('n', '<leader>th', ':FloatermToggle one<CR>', { noremap = true, silent = true })
-      -- Create terminal 2 if it doesn't exist and toggle it
-      vim.api.nvim_set_keymap('n', '<leader>tj', ':FloatermToggle two<CR>', { noremap = true, silent = true })
-      -- Create terminal 3 if it doesn't exist and toggle it
-      vim.api.nvim_set_keymap('n', '<leader>tk', ':FloatermToggle three<CR>', { noremap = true, silent = true })
-      -- Create terminal 4 if it doesn't exist and toggle it
-      vim.api.nvim_set_keymap('n', '<leader>tl', ':FloatermToggle four<CR>', { noremap = true, silent = true })
-
-      -- Exit terminal mode and close the terminal window (hide it)
-      vim.api.nvim_set_keymap('t', '<C-w>q', '<C-\\><C-n>:FloatermHide<CR>', { noremap = true, silent = true })
+      -- Keybindings
+      vim.keymap.set('n', '<leader>a', function()
+        mark.add_file()
+      end, { desc = 'Harpoon: Add File' })
+      vim.keymap.set('n', '<leader>e', function()
+        ui.toggle_quick_menu()
+      end, { desc = 'Harpoon: Open Menu' })
+      vim.keymap.set('n', '<leader>h', function()
+        ui.nav_file(1)
+      end, { desc = 'Harpoon: Go to File 1' })
+      vim.keymap.set('n', '<leader>j', function()
+        ui.nav_file(2)
+      end, { desc = 'Harpoon: Go to File 2' })
+      vim.keymap.set('n', '<leader>k', function()
+        ui.nav_file(3)
+      end, { desc = 'Harpoon: Go to File 3' })
+      vim.keymap.set('n', '<leader>l', function()
+        ui.nav_file(4)
+      end, { desc = 'Harpoon: Go to File 4' })
     end,
-    event = 'VeryLazy', -- Ensure it's lazy-loaded after Neovim starts
   },
   {
     'windwp/nvim-ts-autotag',
