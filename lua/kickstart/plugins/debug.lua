@@ -99,7 +99,7 @@ return {
 
     dap.adapters.coreclr = {
       type = 'executable',
-      command = 'C:\\netcoredbg\\netcoredbg.exe',
+      command = vim.fn.expand '$HOME/.local/bin/netcoredbg/netcoredbg',
       args = { '--interpreter=vscode' },
     }
 
