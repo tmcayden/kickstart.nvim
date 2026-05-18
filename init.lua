@@ -690,6 +690,58 @@ require('lazy').setup {
     end,
     event = 'VeryLazy',
   },
+  {
+    'seblj/roslyn.nvim',
+    commit = 'f2ec6ee',
+    ft = { 'cs', 'cshtml' },
+    dependencies = { 'hrsh7th/cmp-nvim-lsp' },
+    config = function()
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
+      capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
+      require('roslyn').setup {
+        filewatching = 'off',
+        choose_target = function(targets)
+          local bufname = vim.api.nvim_buf_get_name(0)
+          table.sort(targets, function(a, b)
+            local common_a = #vim.fs.dirname(a)
+            local common_b = #vim.fs.dirname(b)
+            -- Prefer the solution whose directory is a prefix of the buffer path
+            local a_is_prefix = bufname:sub(1, #vim.fs.dirname(a)) == vim.fs.dirname(a)
+            local b_is_prefix = bufname:sub(1, #vim.fs.dirname(b)) == vim.fs.dirname(b)
+            if a_is_prefix ~= b_is_prefix then
+              return a_is_prefix
+            end
+            return common_a > common_b
+          end)
+          return targets[1]
+        end,
+        config = {
+          capabilities = capabilities,
+          cmd_env = {
+            Configuration = 'Debug',
+            DOTNET_USE_POLLING_FILE_WATCHER = 'true',
+          },
+          settings = {
+            ['csharp|inlay_hints'] = {
+              csharp_enable_inlay_hints_for_implicit_object_creation = true,
+              csharp_enable_inlay_hints_for_implicit_variable_types = true,
+              csharp_enable_inlay_hints_for_lambda_parameter_types = true,
+              csharp_enable_inlay_hints_for_types = true,
+              dotnet_enable_inlay_hints_for_parameters = true,
+            },
+            ['csharp|completion'] = {
+              dotnet_show_completion_items_from_unimported_namespaces = true,
+              dotnet_show_name_completion_suggestions = true,
+            },
+            ['csharp|code_lens'] = {
+              dotnet_enable_references_code_lens = true,
+            },
+          },
+        },
+      }
+    end,
+  },
+
   -- LSP Plugins
   {
     -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
@@ -711,7 +763,15 @@ require('lazy').setup {
       -- Automatically install LSPs and related tools to stdpath for Neovim
       -- Mason must be loaded before its dependents so we need to set it up here.
       -- NOTE: `opts = {}` is the same as calling `require('mason').setup({})`
-      { 'williamboman/mason.nvim', opts = {} },
+      {
+        'williamboman/mason.nvim',
+        opts = {
+          registries = {
+            'github:mason-org/mason-registry',
+            'github:Crashdummyy/mason-registry',
+          },
+        },
+      },
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
@@ -869,30 +929,20 @@ require('lazy').setup {
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
-        -- rust_analyzer = {},
-        -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
-        --
-        -- Some languages (like typescript) have entire language plugins that can be useful:
-        --    https://github.com/pmizio/typescript-tools.nvim
-        --
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
-        --
-
         lua_ls = {
-          -- cmd = { ... },
-          -- filetypes = { ... },
-          -- capabilities = {},
           settings = {
             Lua = {
               completion = {
                 callSnippet = 'Replace',
               },
-              -- You can toggle below to ignore Lua_LS's noisy `missing-fields` warnings
               diagnostics = { disable = { 'missing-fields' } },
+            },
+          },
+        },
+        basedpyright = {
+          settings = {
+            basedpyright = {
+              analysis = { typeCheckingMode = 'standard' },
             },
           },
         },
@@ -913,7 +963,12 @@ require('lazy').setup {
       -- for you, so that they are available from within Neovim.
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
+        'stylua',
+        'prettierd',
+        'ruff',
+        'roslyn',
+        'vtsls',
+        'vue-language-server',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -921,24 +976,14 @@ require('lazy').setup {
         handlers = {
           function(server_name)
             local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             require('lspconfig')[server_name].setup(server)
-            require('lspconfig').omnisharp.setup {
-              capabilities = capabilities,
-              enable_roslyn_analysers = true,
-              enable_import_completion = true,
-              organize_imports_on_format = true,
-              enable_decompilation_support = true,
-              filetypes = { 'cs', 'vb', 'csproj', 'sln', 'slnx', 'props', 'csx', 'targets', 'cshtml' },
-            }
           end,
         },
         ensure_installed = {},
         automatic_installation = false,
       }
+
       local vue_language_server_path = vim.fn.expand '$MASON/packages' .. '/vue-language-server' .. '/node_modules/@vue/language-server'
 
       local vue_plugin = {
@@ -1047,7 +1092,9 @@ require('lazy').setup {
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        typescript = { 'prettierd', 'prettier', stop_after_first = true },
         vue = { 'prettierd', 'prettier', stop_after_first = true },
+        python = { 'ruff' },
       },
     },
   },
@@ -1299,18 +1346,6 @@ require('lazy').setup {
   { import = 'kickstart.plugins.autopairs' },
   { import = 'kickstart.plugins.neo-tree' },
 
-  { import = 'custom.plugins' },
-  -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
-
-  -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
-  --    This is the easiest way to modularize your config.
-  --
-  --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
