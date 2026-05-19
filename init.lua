@@ -116,6 +116,20 @@ vim.opt.showmode = false
 --  See `:help 'clipboard'`
 vim.schedule(function()
   vim.opt.clipboard = 'unnamedplus'
+  if vim.fn.has 'wsl' == 1 then
+    vim.g.clipboard = {
+      name = 'win32yank-wsl',
+      copy = {
+        ['+'] = 'win32yank.exe -i --crlf',
+        ['*'] = 'win32yank.exe -i --crlf',
+      },
+      paste = {
+        ['+'] = 'win32yank.exe -o --lf',
+        ['*'] = 'win32yank.exe -o --lf',
+      },
+      cache_enabled = 0,
+    }
+  end
 end)
 
 -- Enable break indent
@@ -692,14 +706,44 @@ require('lazy').setup {
   },
   {
     'seblj/roslyn.nvim',
-    commit = 'f2ec6ee',
+    commit = 'b62d1a5',
     ft = { 'cs', 'cshtml' },
     dependencies = { 'hrsh7th/cmp-nvim-lsp' },
     config = function()
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
+
+      vim.lsp.config('roslyn', {
+        capabilities = capabilities,
+        cmd_env = {
+          Configuration = 'Debug',
+          DOTNET_USE_POLLING_FILE_WATCHER = 'true',
+        },
+        settings = {
+          ['csharp|inlay_hints'] = {
+            csharp_enable_inlay_hints_for_implicit_object_creation = true,
+            csharp_enable_inlay_hints_for_implicit_variable_types = true,
+            csharp_enable_inlay_hints_for_lambda_parameter_types = true,
+            csharp_enable_inlay_hints_for_types = true,
+            dotnet_enable_inlay_hints_for_parameters = true,
+          },
+          ['csharp|completion'] = {
+            dotnet_show_completion_items_from_unimported_namespaces = true,
+            dotnet_show_name_completion_suggestions = true,
+          },
+          ['csharp|code_lens'] = {
+            dotnet_enable_references_code_lens = true,
+          },
+        },
+      })
+
       require('roslyn').setup {
         filewatching = 'off',
+        -- The bundled razor extension passes --razorSourceGenerator/--razorDesignTimePath,
+        -- which the Mason-shipped Roslyn binary rejects. Disable until they realign.
+        extensions = {
+          razor = { enabled = false },
+        },
         choose_target = function(targets)
           local bufname = vim.api.nvim_buf_get_name(0)
           table.sort(targets, function(a, b)
@@ -715,29 +759,6 @@ require('lazy').setup {
           end)
           return targets[1]
         end,
-        config = {
-          capabilities = capabilities,
-          cmd_env = {
-            Configuration = 'Debug',
-            DOTNET_USE_POLLING_FILE_WATCHER = 'true',
-          },
-          settings = {
-            ['csharp|inlay_hints'] = {
-              csharp_enable_inlay_hints_for_implicit_object_creation = true,
-              csharp_enable_inlay_hints_for_implicit_variable_types = true,
-              csharp_enable_inlay_hints_for_lambda_parameter_types = true,
-              csharp_enable_inlay_hints_for_types = true,
-              dotnet_enable_inlay_hints_for_parameters = true,
-            },
-            ['csharp|completion'] = {
-              dotnet_show_completion_items_from_unimported_namespaces = true,
-              dotnet_show_name_completion_suggestions = true,
-            },
-            ['csharp|code_lens'] = {
-              dotnet_enable_references_code_lens = true,
-            },
-          },
-        },
       }
     end,
   },
