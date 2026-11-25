@@ -454,7 +454,7 @@ require('lazy').setup {
   },
   {
     'windwp/nvim-ts-autotag',
-    requires = 'nvim-treesitter/nvim-treesitter',
+    dependencies = 'nvim-treesitter/nvim-treesitter',
     config = function()
       require('nvim-ts-autotag').setup()
     end,
@@ -1310,15 +1310,18 @@ require('lazy').setup {
   },
   {
     'github/copilot.vim',
+    -- Off while practicing for the Redo onsite, which bans AI. Set back to true afterwards.
+    enabled = false,
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
-    branch = 'master',
+    branch = 'main',
+    lazy = false, -- main does not support lazy-loading
     build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = {
+    -- Needs the tree-sitter CLI (0.26.1+) and a C compiler to build parsers.
+    config = function()
+      require('nvim-treesitter').install {
         'bash',
         'c',
         'diff',
@@ -1327,6 +1330,7 @@ require('lazy').setup {
         'luadoc',
         'markdown',
         'markdown_inline',
+        'python',
         'query',
         'vim',
         'vimdoc',
@@ -1334,23 +1338,39 @@ require('lazy').setup {
         'typescript',
         'javascript',
         'css',
-      },
-      -- Autoinstall languages that are not installed
-      auto_install = true,
-      sync_install = false,
-      highlight = {
-        enable = true,
-        -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
-        --  If you are experiencing weird indenting issues, add the language to
-        --  the list of additional_vim_regex_highlighting and disabled languages for indent.
-        additional_vim_regex_highlighting = false,
-      },
-      indent = { enable = true, disable = { 'ruby' } },
-    },
+        'c_sharp',
+        'razor',
+        'sql',
+        'json',
+        'yaml',
+        'toml',
+        'xml',
+        'ini',
+        'powershell',
+        'helm',
+        'd',
+        'git_config',
+        'gitcommit',
+        'gitignore',
+      }
+
+      -- main no longer enables highlighting or indent itself; start them for any
+      -- filetype whose parser is installed.
+      vim.api.nvim_create_autocmd('FileType', {
+        group = vim.api.nvim_create_augroup('treesitter-start', { clear = true }),
+        callback = function(args)
+          if not pcall(vim.treesitter.start, args.buf) then
+            return
+          end
+          if args.match ~= 'ruby' then
+            vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
+      })
+    end,
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
     --
-    --    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
     --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
     --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
   },
